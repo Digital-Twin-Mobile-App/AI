@@ -1,0 +1,7 @@
+draft
+__pycache__
+*.pyc
+.dockerignore
+Dockerfile
+labels.json
+oppd_model.h5
