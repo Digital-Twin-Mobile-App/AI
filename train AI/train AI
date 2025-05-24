@@ -1,52 +1,76 @@
+# Cài đặt thư viện
+!pip install tensorflow opencv-python numpy scikit-learn
+
+# Import thư viện
 import tensorflow as tf
 from tensorflow.keras import layers, models
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 import numpy as np
-import cv2
 import os
-from sklearn.model_selection import train_test_split
 import json
+from google.colab import drive
+
+# Mount Google Drive
+try:
+    drive.mount('/content/drive', timeout_ms=60000)
+    print("Google Drive đã được mount thành công")
+except Exception as e:
+    print(f"Lỗi khi mount Google Drive: {str(e)}")
+    raise SystemExit("Vui lòng kiểm tra kết nối mạng hoặc tài khoản Google và thử lại")
 
 # Đường dẫn
-oppd_dir = 'D:/DADN/OPPD'
-model_path = 'D:/DADN/oppd_model.h5'
-labels_path = 'D:/DADN/labels.json'
+data_dir = '/content/drive/MyDrive/dataset'
+model_path = '/content/drive/MyDrive/AI_Model/oppd_model.h5'
+labels_path = '/content/drive/MyDrive/AI_Model/labels.json'
+
+# Tạo ImageDataGenerator cho tăng cường dữ liệu
 datagen = ImageDataGenerator(
-    rescale=1./255,  # Chuẩn hóa giá trị pixel về [0, 1]
+    rescale=1./255,
     rotation_range=20,
     width_shift_range=0.2,
     height_shift_range=0.2,
     horizontal_flip=True,
     fill_mode='nearest',
-    validation_split=0.2  # Chia 20% dữ liệu cho tập kiểm tra
+    validation_split=0.2
 )
 
 # Tải dữ liệu từ các thư mục
-train_generator = datagen.flow_from_directory(
-    oppd_dir,
-    target_size=(224, 224),  # Kích thước ảnh đầu vào
-    batch_size=32,
-    class_mode='sparse',  # Dùng cho sparse_categorical_crossentropy
-    subset='training'     # Tập huấn luyện
-)
+try:
+    train_generator = datagen.flow_from_directory(
+        data_dir,
+        target_size=(224, 224),
+        batch_size=32,
+        class_mode='sparse',
+        subset='training'
+    )
+    validation_generator = datagen.flow_from_directory(
+        data_dir,
+        target_size=(224, 224),
+        batch_size=32,
+        class_mode='sparse',
+        subset='validation'
+    )
+except Exception as e:
+    print(f"Lỗi khi tải dữ liệu: {str(e)}")
+    raise SystemExit("Kiểm tra thư mục dataset và cấu trúc dữ liệu")
 
-validation_generator = datagen.flow_from_directory(
-    oppd_dir,
-    target_size=(224, 224),
-    batch_size=32,
-    class_mode='sparse',
-    subset='validation'   # Tập kiểm tra
-)
-# Hàm tiền xử lý ảnh
-def preprocess_image(image_path, target_size=(224, 224)):
-    img = cv2.imread(image_path)
-    if img is None:
-        raise ValueError(f"Không thể đọc ảnh: {image_path}")
-    img = cv2.resize(img, target_size)
-    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-    img = img / 255.0
-    return img
+# Kiểm tra số lượng ảnh
+if train_generator.samples == 0:
+    raise ValueError("Không tìm thấy ảnh nào trong tập huấn luyện. Kiểm tra lại dataset.")
+if validation_generator.samples == 0:
+    raise ValueError("Không tìm thấy ảnh nào trong tập kiểm tra. Kiểm tra lại dataset.")
 
+print(f"Số ảnh huấn luyện: {train_generator.samples}")
+print(f"Số ảnh kiểm tra: {validation_generator.samples}")
+
+# Tạo nhãn chi tiết (species_stage)
+labels = {}
+for class_name, idx in train_generator.class_indices.items():
+    # class_name có dạng "APESV/stage_1"
+    species, stage = class_name.split('/')
+    labels[idx] = {"species": species, "stage": stage}
+
+print(f"Các lớp: {labels}")
 
 # Hàm xây dựng mô hình CNN
 def build_model(num_classes, input_shape=(224, 224, 3)):
@@ -62,53 +86,36 @@ def build_model(num_classes, input_shape=(224, 224, 3)):
         layers.Dropout(0.5),
         layers.Dense(num_classes, activation='softmax')
     ])
-    
+
     model.compile(optimizer='adam',
                   loss='sparse_categorical_crossentropy',
                   metrics=['accuracy'])
     return model
 
-if os.path.exists(model_path):
-    print(f"Mô hình đã tồn tại tại {model_path}. Đang tải mô hình...")
-    model = tf.keras.models.load_model(model_path)
-    print("Mô hình đã được tải thành công.")
-else:
-    # Huấn luyện mô hình nếu chưa có
-    print(f"Bắt đầu huấn luyện mô hình...")
-    num_classes = len(train_generator.class_indices)
-    model = build_model(num_classes)
-    history = model.fit(
-        train_generator,
-        steps_per_epoch=train_generator.samples // train_generator.batch_size,
-        epochs=3,
-        validation_data=validation_generator,
-        validation_steps=validation_generator.samples // validation_generator.batch_size
-    )
+# Huấn luyện mô hình
+print("Bắt đầu huấn luyện mô hình...")
+num_classes = len(train_generator.class_indices)
+model = build_model(num_classes)
+history = model.fit(
+    train_generator,
+    steps_per_epoch=train_generator.samples // train_generator.batch_size,
+    epochs=3,
+    validation_data=validation_generator,
+    validation_steps=validation_generator.samples // validation_generator.batch_size
+)
 
-    # Lưu mô hình
-    model.save(model_path)
-    print(f"Mô hình đã được lưu vào {model_path}")
-
-# Hàm kiểm tra file JSON hợp lệ
-def is_valid_json(file_path):
-    if not os.path.exists(file_path):
-        return False
-    try:
-        with open(file_path, 'r') as f:
-            json.load(f)
-        return True
-    except json.JSONDecodeError:
-        return False
+# Lưu mô hình
+model.save(model_path)
+print(f"Mô hình đã được lưu vào {model_path}")
 
 # Đánh giá mô hình
 test_loss, test_accuracy = model.evaluate(validation_generator)
 print(f"Độ chính xác trên tập kiểm tra: {test_accuracy:.4f}")
 
-# Lưu nhãn (class indices) nếu chưa tồn tại
-if not os.path.exists(labels_path):
-    labels = train_generator.class_indices
-    with open(labels_path, 'w') as f:
-        json.dump(labels, f)
-    print(f"Nhãn đã được lưu vào {labels_path}")
-else:
-    print(f"Nhãn đã tồn tại tại {labels_path}.")
+# Lưu nhãn
+if not labels:
+    raise ValueError("Danh sách nhãn rỗng. Kiểm tra lại dataset.")
+print(f"Danh sách nhãn trước khi lưu: {labels}")
+with open(labels_path, 'w') as f:
+    json.dump(labels, f)
+print(f"Nhãn đã được lưu vào {labels_path}")
