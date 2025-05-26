@@ -4,35 +4,45 @@ from io import BytesIO
 from PIL import Image
 from model import model_instance
 import numpy as np
+import cv2
 
-def preprocess_input(input_value, target_size=(224, 224)):
-    # Decode the base64 string into raw image bytes
-    image_data = base64.b64decode(input_value)
-    
-    # Load the image using PIL
-    image = Image.open(BytesIO(image_data))
-    image = image.convert("RGB")  # Ensure the image has 3 channels (RGB)
-    image = image.resize(target_size)
-    
-    # Convert the image to a NumPy array and scale to [0, 1]
-    image_array = np.array(image).astype(np.float32) / 255.0
 
-    # Add batch dimension to get [1, height, width, 3]
-    input_tensor = np.expand_dims(image_array, axis=0)
-    
-    print(f"Input tensor shape: {input_tensor.shape}, dtype: {input_tensor.dtype}")
-    
-    # Final checks
-    if len(input_tensor.shape) != 4 or input_tensor.shape[0] != 1 or input_tensor.shape[-1] != 3:
-        raise ValueError("Input must have shape [1, height, width, 3]")
+def decode_base64_image(base64_str):
+    try:
+        image_data = base64.b64decode(base64_str)
+        image_pil = Image.open(BytesIO(image_data)).convert("RGB")
+        return cv2.cvtColor(np.array(image_pil), cv2.COLOR_RGB2BGR)  # return as BGR (OpenCV format)
+    except Exception as e:
+        raise ValueError(f"Lỗi khi giải mã ảnh base64: {str(e)}")
 
-    return input_tensor
+def preprocess_cv_image(img, target_size=(224, 224)):
+    if img is None:
+        raise ValueError("Ảnh đầu vào không hợp lệ.")
+    img = cv2.resize(img, target_size)
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    img = img / 255.0
+    return img
 
-def predict(input_value):
-    # Preprocess the input
-    input_tensor = preprocess_input(input_value)
+
+def predict_process(input_value):
     
-    # Get model predictions
-    result = model_instance.predict(input_tensor)
+    # Decode the base64 image
+    img_cv = decode_base64_image(input_value)
+
+    # CNN prediction
+    img_preprocessed = preprocess_cv_image(img_cv)
+    img_tensor = np.expand_dims(img_preprocessed, axis=0)
+    predictions = model_instance.model.predict(img_tensor)[0]
+    class_idx = int(np.argmax(predictions))
+    species = list(model_instance.labels.keys())[class_idx]
+    confidence = float(predictions[class_idx])
+
+    # Sprout stage analysis
+    stage, height_ratio = model_instance.analyze_sprout_growth_cv_image(img_cv)
     
-    return result
+    return {
+            "species": species,
+            "stage": stage,
+            "confidence": confidence,
+            "height_ratio": height_ratio
+        }

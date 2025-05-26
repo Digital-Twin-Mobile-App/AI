@@ -36,10 +36,12 @@
 
 - **Response:**
 ```json
-    {
+   {
         "prediction": {
-            "class": "<predicted-class-name>",
-            "confidence": <confidence-score>
+            "species": "OPPD-master-DATA-images_plants-APESV",
+            "stage": "Mầm trưởng thành (stage_3)",
+            "confidence": 1.0,
+            "height_ratio": 0.675
         }
     }
 ```

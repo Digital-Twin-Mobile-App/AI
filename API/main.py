@@ -1,6 +1,6 @@
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
-from ultils import predict
+from ultils import predict_process
 
 app = FastAPI()
 
@@ -16,7 +16,7 @@ async def get_prediction(data: InputData):
     try:
         # Process the input data
         input_value = data.input_data
-        result = predict(input_value)
+        result = predict_process(input_value)
         return {"prediction": result}
     except ValueError as ve:
         raise HTTPException(status_code=422, detail=str(ve))
