@@ -20,7 +20,7 @@
 
 ### 2. Predict Tree State
 
-**POST /predict//**
+**POST /predict**
 
 - **Description:** Predict the state of a tree from a base64-encoded image.
 
