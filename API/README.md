@@ -70,6 +70,25 @@ docker run -d \
 - The `-e` flags set the environment variables for the container.
 - The `-v` flags mount your model and label files into the container.
 
+* Example:
+  + Model's path: /home/hung-le/hcmut/digital twin app/AI/API/oppd_model.h5
+  + Label's path: /home/hung-le/hcmut/digital twin app/AI/API/labels.json
+```
+docker run -d \
+  -p 8000:8000 \
+  -v "/home/hung-le/hcmut/digital twin app/AI/API/oppd_model.h5":/app/oppd_model.h5 \
+  -v "/home/hung-le/hcmut/digital twin app/AI/API/labels.json":/app/labels.json \
+  -e MODEL_PATH=/app/oppd_model.h5 \
+  -e LABELS_PATH=/app/labels.json \
+  --name tree-state-api \
+  hungle142/tree-state-api
+```
+### Show logs of the container:
+
+```
+docker logs tree-state-api
+```
+
 The API will be available at [http://localhost:8000](http://localhost:8000).
 
 ---
