@@ -1,6 +1,6 @@
-fastapi
-uvicorn
-torch
-tensorflow
-numpy
-pillow
+fastapi==0.115.12
+uvicorn==0.34.2
+torch==2.7.0
+tensorflow==2.16.1
+numpy==1.26.4
+pillow==11.2.1
