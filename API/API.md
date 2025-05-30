@@ -20,7 +20,7 @@
 
 ### 2. Predict Tree State
 
-**POST /predict//**
+**POST /predict**
 
 - **Description:** Predict the state of a tree from a base64-encoded image.
 
@@ -36,10 +36,12 @@
 
 - **Response:**
 ```json
-    {
+   {
         "prediction": {
-            "class": "<predicted-class-name>",
-            "confidence": <confidence-score>
+            "species": "OPPD-master-DATA-images_plants-APESV",
+            "stage": "Mầm trưởng thành (stage_3)",
+            "confidence": 1.0,
+            "height_ratio": 0.675
         }
     }
 ```
