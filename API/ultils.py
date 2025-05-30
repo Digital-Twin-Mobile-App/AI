@@ -1,6 +1,7 @@
 import tensorflow as tf
 import base64
 from io import BytesIO
+import io
 from PIL import Image
 from model import model_instance
 import numpy as np
@@ -9,11 +10,19 @@ import cv2
 
 def decode_base64_image(base64_str):
     try:
-        image_data = base64.b64decode(base64_str)
+        # image_data = base64.b64decode(base64_str)
         image_pil = Image.open(BytesIO(image_data)).convert("RGB")
         return cv2.cvtColor(np.array(image_pil), cv2.COLOR_RGB2BGR)  # return as BGR (OpenCV format)
     except Exception as e:
         raise ValueError(f"Lỗi khi giải mã ảnh base64: {str(e)}")
+
+def decode_bytes_image_cv(image_bytes):
+    try:
+        image_pil = Image.open(io.BytesIO(image_bytes)).convert("RGB")
+        img_cv = cv2.cvtColor(np.array(image_pil), cv2.COLOR_RGB2BGR)
+        return img_cv
+    except Exception as e:
+        raise ValueError(f"Lỗi khi mở ảnh từ bytes: {str(e)}")
 
 def preprocess_cv_image(img, target_size=(224, 224)):
     if img is None:
@@ -27,7 +36,7 @@ def preprocess_cv_image(img, target_size=(224, 224)):
 def predict_process(input_value):
     
     # Decode the base64 image
-    img_cv = decode_base64_image(input_value)
+    img_cv = decode_bytes_image_cv(input_value)
 
     # CNN prediction
     img_preprocessed = preprocess_cv_image(img_cv)
