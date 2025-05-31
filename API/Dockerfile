@@ -1,27 +1,15 @@
-FROM python:3.9-slim
+# Sử dụng image Python
+FROM python:3.10-slim
 
-# Set work directory
+# Đặt thư mục làm việc
 WORKDIR /app
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
-    build-essential \
-    libglib2.0-0 \
-    libsm6 \
-    libxext6 \
-    libxrender-dev \
-    && rm -rf /var/lib/apt/lists/*
-
-# Copy requirements and install
+# Copy file requirements.txt và cài đặt dependencies
 COPY requirements.txt .
-RUN pip install --upgrade pip
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy the rest of the code
+# Copy toàn bộ mã nguồn vào container
 COPY . .
 
-# Expose port
-EXPOSE 8000
-
-# Run the API
+# Chạy ứng dụng
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]

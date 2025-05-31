@@ -1,0 +1,13 @@
+version: '3.8'
+
+services:
+  app:
+    image: vietlecd/dadn:fast_api  # Sử dụng image đã build sẵn
+    container_name: fastapi_app
+    ports:
+      - "8000:8000"  # Map cổng 8000 của container ra cổng 8000 của máy host
+    volumes:
+      - .:/app  # Mount mã nguồn vào container (nếu cần phát triển)
+    environment:
+      - PYTHONUNBUFFERED=1  # Đảm bảo log được in ra ngay lập tức
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
